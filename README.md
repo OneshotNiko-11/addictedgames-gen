@@ -8,11 +8,11 @@ so yeah by the title you know its for addictedgames
 - ⚡ supports password requirements
 
 # usage
-install dependencies: `pip install -r requirements.txt`
-add socks5 proxies to `proxies.txt` (format: ip:port)
-run: `python gen.py`
-follow prompts to generate accounts
-accounts saved to `accs.txt`
-
+1. install dependencies: `pip install -r requirements.txt`
+2. add socks5 proxies to `proxies.txt` (format: `ip:port`)
+3. run: `python gen.py`
+4. follow prompts to generate accounts
+5. accounts saved to `accs.txt`
+6. 
 # showcase
 <img width="646" height="560" alt="image" src="https://github.com/user-attachments/assets/f108cc48-fc3a-45a9-b10d-065c351ba8b1" />
