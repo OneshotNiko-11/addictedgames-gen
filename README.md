@@ -15,4 +15,4 @@ so yeah by the title you know its for addictedgames
 5. accounts saved to `accs.txt`
 
 # showcase
-<img width="646" height="560" alt="image" src="https://github.com/user-attachments/assets/f108cc48-fc3a-45a9-b10d-065c351ba8b1" />
+<img width="627" height="767" alt="image" src="https://github.com/user-attachments/assets/4398c464-2e1a-4179-9eea-8c4a7d9f2b91" />
