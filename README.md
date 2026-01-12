@@ -2,10 +2,10 @@
 so yeah by the title you know its for addictedgames
 
 # features
-⚡ fast account making
-⚡ socks5 proxies support
-⚡ request based because fuck you browser
-⚡ supports password requirements
+- ⚡ fast account making
+- ⚡ socks5 proxies support
+- ⚡ request based because fuck you browser
+- ⚡ supports password requirements
 
 # usage
 install dependencies: `pip install -r requirements.txt`
