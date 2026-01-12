@@ -78,37 +78,32 @@ def check_inbox_with_retry(session, token, email):
                     messages = response.json()
 
                     if messages:
-                        # Sort by oldest first (activation email comes first)
                         messages.sort(key=lambda x: x.get('created_at', ''))
 
                         for msg in messages:
                             subject = str(msg.get('subject', '')).lower()
 
-                            # Look for activation email
                             if 'activate' in subject and 'please' in subject:
                                 print(Fore.GREEN + "[+] Found activation email!")
 
-                                # Try to get link from HTML first (it's complete)
                                 body_html = msg.get('body_html', '')
                                 if body_html:
-                                    # Look for href in HTML
                                     import re
                                     match = re.search(r'href="(https://addictinggames\.com/user/confirmaccount/[^"]+)"', body_html)
                                     if match:
                                         return match.group(1)
 
-                                # Fallback to text version
+    
                                 body_text = msg.get('body_text', '')
                                 if body_text:
-                                    # Find the actual link (not the truncated one with ...)
+ 
                                     lines = body_text.split('\n')
                                     for line in lines:
                                         if 'https://addictinggames.com/user/confirmaccount' in line:
-                                            # Extract the full URL (might be truncated with ...)
+                    
                                             url_start = line.find('https://')
                                             if url_start != -1:
                                                 url_part = line[url_start:]
-                                                # Take everything up to next space or end
                                                 url_end = min(
                                                     url_part.find(' ') if url_part.find(' ') != -1 else len(url_part),
                                                     url_part.find('\n') if url_part.find('\n') != -1 else len(url_part),
