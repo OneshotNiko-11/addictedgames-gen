@@ -1,6 +1,3 @@
-# note
-it wont let you login without verifying your email, im adding it now so its broken for now thats why its archived
-
 # generator for addictedgames.com
 so yeah by the title you know its for addictedgames
 
