@@ -13,6 +13,6 @@ so yeah by the title you know its for addictedgames
 3. run: `python gen.py`
 4. follow prompts to generate accounts
 5. accounts saved to `accs.txt`
-6. 
+
 # showcase
 <img width="646" height="560" alt="image" src="https://github.com/user-attachments/assets/f108cc48-fc3a-45a9-b10d-065c351ba8b1" />
