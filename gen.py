@@ -4,13 +4,14 @@ import string
 import threading
 import time
 import os
+import re
 from colorama import init, Fore
 
 init()
 
 def load_proxies():
     try:
-        with open("data/proxies.txt", "r") as f:
+        with open("proxies.txt", "r") as f:
             proxies = [line.strip() for line in f if line.strip()]
             if proxies:
                 print(Fore.YELLOW + f"[*] Loaded {len(proxies)} proxies")
@@ -50,12 +51,83 @@ def create_temp_inbox(session):
 
         data = response.json()
         email = data.get('email')
+        token = data.get('token')
 
-        if not email:
+        if not email or not token:
             return None
 
-        return {'address': email}
+        return {'address': email, 'token': token}
     except:
+        return None
+
+def check_inbox_with_retry(session, token, email):
+    try:
+        url = f'https://api.internal.temp-mail.io/api/v3/email/{email}/messages'
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json'
+        }
+
+        print(Fore.YELLOW + f"[*] Checking inbox for: {email}")
+
+        for attempt in range(10):
+            try:
+                response = session.get(url, headers=headers, timeout=10)
+
+                if response.status_code == 200:
+                    messages = response.json()
+
+                    if messages:
+                        # Sort by oldest first (activation email comes first)
+                        messages.sort(key=lambda x: x.get('created_at', ''))
+
+                        for msg in messages:
+                            subject = str(msg.get('subject', '')).lower()
+
+                            # Look for activation email
+                            if 'activate' in subject and 'please' in subject:
+                                print(Fore.GREEN + "[+] Found activation email!")
+
+                                # Try to get link from HTML first (it's complete)
+                                body_html = msg.get('body_html', '')
+                                if body_html:
+                                    # Look for href in HTML
+                                    import re
+                                    match = re.search(r'href="(https://addictinggames\.com/user/confirmaccount/[^"]+)"', body_html)
+                                    if match:
+                                        return match.group(1)
+
+                                # Fallback to text version
+                                body_text = msg.get('body_text', '')
+                                if body_text:
+                                    # Find the actual link (not the truncated one with ...)
+                                    lines = body_text.split('\n')
+                                    for line in lines:
+                                        if 'https://addictinggames.com/user/confirmaccount' in line:
+                                            # Extract the full URL (might be truncated with ...)
+                                            url_start = line.find('https://')
+                                            if url_start != -1:
+                                                url_part = line[url_start:]
+                                                # Take everything up to next space or end
+                                                url_end = min(
+                                                    url_part.find(' ') if url_part.find(' ') != -1 else len(url_part),
+                                                    url_part.find('\n') if url_part.find('\n') != -1 else len(url_part),
+                                                    url_part.find('[') if url_part.find('[') != -1 else len(url_part)
+                                                )
+                                                return url_part[:url_end]
+
+                print(Fore.YELLOW + f"[*] Check {attempt + 1}/10 - No activation email yet, retrying in 5s...")
+                time.sleep(5)
+
+            except Exception as e:
+                print(Fore.RED + f"[!] Check error: {e}")
+                time.sleep(5)
+
+        print(Fore.RED + "[-] Timeout waiting for activation email")
+        return None
+
+    except Exception as e:
+        print(Fore.RED + f"[!] Inbox check error: {e}")
         return None
 
 def generate_username():
@@ -87,21 +159,27 @@ def create_account(proxies, target_accounts, accounts_created, lock, running, pr
 
         try:
             temp_mail = create_temp_inbox(session)
-            if not temp_mail or 'address' not in temp_mail:
+            if not temp_mail or 'address' not in temp_mail or 'token' not in temp_mail:
                 continue
 
             email = temp_mail['address']
+            token = temp_mail['token']
+
             print(Fore.GREEN + "[*] (mail made) " + Fore.LIGHTMAGENTA_EX + f"({email})")
+
             username = generate_username()
             password = generate_password()
 
-            url = 'https://addictinggames.com/user/register'
+            url = 'https://prod.addictinggames.com/user/registerpass?_format=json'
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Origin': 'https://addictinggames.com',
-                'Referer': 'https://addictinggames.com/'
+                'Accept': 'application/json, text/plain, */*',
+                'Origin': 'https://www.addictinggames.com',
+                'Referer': 'https://www.addictinggames.com/',
+                'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive'
             }
 
             payload = {
@@ -111,15 +189,29 @@ def create_account(proxies, target_accounts, accounts_created, lock, running, pr
                 "field_opt_in": [{"value": False}]
             }
 
+            print(Fore.YELLOW + f"[*] Registering at {url}")
+
             response = session.post(url, headers=headers, json=payload, timeout=15)
 
             if response.status_code == 200:
-                with lock:
-                    if accounts_created[0] < target_accounts:
-                        accounts_created[0] += 1
-                        with open("accs.txt", "a") as f:
-                            f.write(f"{email}:{password}\n")
-                        print(Fore.CYAN + "[+] (created) " + Fore.LIGHTMAGENTA_EX + f"({email}:{password})")
+                print(Fore.GREEN + "[+] registered! checking inbox...")
+
+                verification_link = check_inbox_with_retry(session, token, email)
+
+                if verification_link:
+                    print(Fore.CYAN + "[*] activating account...")
+                    verify_response = session.get(verification_link, timeout=10)
+                    if verify_response.status_code == 200:
+                        with lock:
+                            if accounts_created[0] < target_accounts:
+                                accounts_created[0] += 1
+                                with open("accs.txt", "a") as f:
+                                    f.write(f"{username}:{password}\n")
+                                print(Fore.CYAN + f"[+] (created) " + Fore.LIGHTMAGENTA_EX + f"({username}:{password})")
+                    else:
+                        print(Fore.RED + f"[-] verification failed: {verify_response.status_code}")
+                else:
+                    print(Fore.RED + "[-] no verification email found")
             else:
                 print(Fore.RED + f"[-] (failed) {response.status_code}")
 
@@ -144,6 +236,8 @@ def main():
         print(Fore.GREEN + "[+] Using proxies")
     else:
         print(Fore.YELLOW + "[*] Running without proxies")
+
+    print(Fore.YELLOW + "[!] format is username:password")
 
     try:
         target_accounts = int(input(Fore.LIGHTCYAN_EX + "Accounts to make: " + Fore.WHITE))
@@ -174,9 +268,6 @@ def main():
 
     print(Fore.LIGHTGREEN_EX + f"\nCreated {accounts_created[0]} accounts")
     print(Fore.LIGHTBLUE_EX + "[*] Saved to accs.txt")
-    print(Fore.LIGHTBLUE_EX + "[*] Format: email:password")
 
 if __name__ == "__main__":
-    os.makedirs("output", exist_ok=True)
-    os.makedirs("data", exist_ok=True)
     main()
