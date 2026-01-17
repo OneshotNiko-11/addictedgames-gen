@@ -16,3 +16,5 @@ so yeah by the title you know its for addictedgames
 
 # showcase
 <img width="627" height="767" alt="image" src="https://github.com/user-attachments/assets/4398c464-2e1a-4179-9eea-8c4a7d9f2b91" />
+
+https://github.com/user-attachments/assets/41387b18-271c-4565-88b9-8db7b977b186
